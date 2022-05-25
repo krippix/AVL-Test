@@ -14,10 +14,8 @@ class Tree():
 
         # if list was provided, just iterate over it multiple times
         if isinstance(value, list):
-            print("working with list!")
             for no in value:
                 self.insert(no)
-                self.export()
             return
         
         if self.value is None:
@@ -25,23 +23,31 @@ class Tree():
             return
         
         if value == self.value:
-            print("Value already found. REEEEEEEEEEEEEEEEEEEEEE")
+            print("Value already in searchtree")
             return
 
+        Tree.__rec_insert(self, value)
+
+    
+    def __rec_insert(tree, value):
+        
         # left
-        if value < self.value:
-            if self.left is None:
-                self.left = Tree(value)
+        if value < tree.value:
+            if tree.left is None:
+                tree.left = Tree(value)
                 return
-            self.left.insert(value)
-            return
+            tree.left.insert(value) 
             
         # right
-        if value > self.value:
-            if self.right is None:
-                self.right = Tree(value)
+        if value > tree.value:
+            if tree.right is None:
+                tree.right = Tree(value)
                 return
-            self.right.insert(value)
+            tree.right.insert(value)
+    
+        if not Tree.calc_balance(tree):
+            #Tree.balance_tree(tree)
+            pass
 
     
     def search(self, value) -> bool:
@@ -61,19 +67,37 @@ class Tree():
             if self.right is None:
                 return False
             return self.right.search(value)
+
     
+    def __search_parent(tree, child):
+        '''Searches for parent node of provided value. Make sure result is not in the root of the tree you provide.'''
+
+        # left
+        if child.value < tree.value:
+            if tree.left.value == child.value:
+                return tree
+            next_tree = tree.left
+        
+        # right
+        if child.value > tree.value:
+            if tree.right.value == child.value:
+                return tree
+            next_tree = tree.right
+
+        return Tree.__search_parent(next_tree, child)
+
 
     def delete(self, value) -> bool:
         
         if self.value == value:
             # this should only happen if this is the root of the tree
+            print("Deleting root node")
             result = self.__delete_root()
 
         result = Tree.__delete_node(self, value)
         
         if not result:
             print("Node not found, nothing deleted.")
-        
         return result
      
 
@@ -89,7 +113,7 @@ class Tree():
             return False
 
         if next_node == value:
-            tree.right = Tree.find_successor(next_node)
+            tree.right = Tree.find_successor_parent(next_node)
             return True
         
         return Tree.__delete_node(next_node, value)
@@ -97,56 +121,118 @@ class Tree():
 
     def __delete_root(self):
         if self.right is None and self.left is None:
-                self.value == None
-                return
+            print("This is the only node available.")
+            self.value == None
+            return True
             
         # right is None
         if self.right is None:
             self.value = self.left.value
             self.right = self.left.right
             self.left = self.left.left
-            return
+            return True
         
         # left is None
         if self.left is None:
             self.value = self.right.value
             self.left = self.right.left
             self.right = self.right.right
-            return
+            return True
 
         # right.left None
         if self.right.left is None:
             self.value = self.right.value
             self.right = self.right.right
+            return
 
+        # if none of the trivial cases worked
         successor = Tree.find_successor(self)
+        parent = Tree.__search_parent(self, successor)
 
+        # successor should always be left of parent.
+        parent.left = successor.right
         self.value = successor.value
-        self.right = successor.right
+        
 
 
     def find_successor(tree):
-        '''Searches for successor and replaces deleted object'''
-        
-        # give parent current branches
+        '''Returns successor for given tree's root. Entrypoint.'''
+
         if tree.right.left is None:
             return tree.right
-
-        return Tree.__rec_find_successor(tree.right)
+        
+        return Tree.__rec_find_successor(tree.right.left)
 
 
     def __rec_find_successor(tree):
-        
-        if tree.left.left is None:
-            
-            result = tree.left
+        '''Returns successor for given tree's root. Dont call this.'''
 
-            # assign right of successor to left of its parent
-            tree.left = tree.left.right
-            
-            return result
+        if tree.left is None:
+            return tree
         
-        return tree.__rec_find_successor(tree.left)
+        return Tree.__rec_find_successor(tree.left)
+        
+
+    def get_depth(tree, depth=0) -> int:
+        '''Returns depth of provided tree'''
+
+        depth += 1
+        left_depth = 0
+        right_depth = 0
+        
+        if tree.left is not None:
+            left_depth = Tree.get_depth(tree.left, depth)
+        
+        if tree.right is not None:
+            right_depth = Tree.get_depth(tree.right, depth)
+        
+        return max(depth + left_depth, depth + right_depth)
+
+
+    def balance_tree(tree):
+        '''balances current node'''
+        
+        Tree.calc_balance(tree)
+
+        if (tree.balance >= 2) and (tree.right.balance in [0,1]):
+            Tree.__rot_left(tree)
+            return
+
+        if (tree.balance >= 2) and (tree.right.balance == -1):
+            Tree.__rot_right(tree.right)
+            Tree.__rot_left(tree)
+            return
+
+        if (tree.balance <= -2) and (tree.right.balance in [-1,0]):
+            Tree.__rot_right(tree)
+            return
+
+        if (tree.balance <= -2) and (tree.right.balance == 1):
+            Tree.__rot_left(tree.left)
+            Tree.__rot_right(tree)
+            return
+    
+
+    def __rot_right(node):
+        pass
+
+    def __rot_left(node):
+        pass
+
+
+    def calc_balance(tree):
+        '''Calculates balance of current node. Returns True if its still a valid AVL-Tree'''
+        
+        right = 0
+        left = 0
+
+        if tree.right is not None:
+            right = tree.right.balance
+        
+        if tree.left is not None:
+            left = tree.left.balance
+
+        tree.balance = right - left
 
 
     def export(self) -> tuple():
@@ -162,3 +248,10 @@ class Tree():
             right_tuple = self.right.export()
 
         return (self.value, left_tuple, right_tuple)
+
+    
+    def print(self):
+        '''Attempts to print the tree.'''
+        data = self.export()
+
+        # oof i dont even know where to start
