@@ -23,3 +23,5 @@ test.delete(del_no)
 print(f"Structure after deleting: ")
 print(test.export())
 print("")
+
+test.calc_height()

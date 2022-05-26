@@ -7,6 +7,9 @@ class Tree():
         self.left = None
         self.right = None
         self.balance = 0
+        
+        # This variable cannot be trusted and is relative!
+        self.depth = 0
     
 
     def insert(self, value):
@@ -20,11 +23,9 @@ class Tree():
         
         if self.value is None:
             self.value = value
-            return
         
         if value == self.value:
             print("Value already in searchtree")
-            return
 
         Tree.__rec_insert(self, value)
 
@@ -36,7 +37,7 @@ class Tree():
             if tree.left is None:
                 tree.left = Tree(value)
                 return
-            tree.left.insert(value) 
+            tree.left.insert(value)
             
         # right
         if value > tree.value:
@@ -44,10 +45,11 @@ class Tree():
                 tree.right = Tree(value)
                 return
             tree.right.insert(value)
+
+        # while going back up, check if each node is balanced
+        Tree.calc_balance(tree)
     
-        if not Tree.calc_balance(tree):
-            #Tree.balance_tree(tree)
-            pass
+
 
     
     def search(self, value) -> bool:
@@ -93,6 +95,7 @@ class Tree():
             # this should only happen if this is the root of the tree
             print("Deleting root node")
             result = self.__delete_root()
+            return
 
         result = Tree.__delete_node(self, value)
         
@@ -143,7 +146,7 @@ class Tree():
         if self.right.left is None:
             self.value = self.right.value
             self.right = self.right.right
-            return
+            return True
 
         # if none of the trivial cases worked
         successor = Tree.find_successor(self)
@@ -153,7 +156,6 @@ class Tree():
         parent.left = successor.right
         self.value = successor.value
         
-
 
     def find_successor(tree):
         '''Returns successor for given tree's root. Entrypoint.'''
@@ -173,22 +175,29 @@ class Tree():
         return Tree.__rec_find_successor(tree.left)
         
 
-    def get_depth(tree, depth=0) -> int:
-        '''Returns depth of provided tree'''
+    def calc_depth(self):
+        '''Iterates over the tree and changes depth value for each. This will set the depth in the tree object.'''
+        self.depth = 0
 
-        depth += 1
-        left_depth = 0
-        right_depth = 0
+        Tree.__rec_calc_depth(self)
+        return
         
+        
+    def __rec_calc_depth(tree, depth=0):
+        
+        depth += 1
+        tree.depth = depth
+
         if tree.left is not None:
-            left_depth = Tree.get_depth(tree.left, depth)
+            left_depth = Tree.__rec_calc_depth(tree.left, depth)
         
         if tree.right is not None:
-            right_depth = Tree.get_depth(tree.right, depth)
-        
-        return max(depth + left_depth, depth + right_depth)
+            right_depth = Tree.__rec_calc_depth(tree.right, depth)
 
-
+        print(f"The node with value '{tree.value}' has depth {tree.depth}")
+        return 
+    
+    
     def balance_tree(tree):
         '''balances current node'''
         
@@ -212,6 +221,29 @@ class Tree():
             Tree.__rot_right(tree)
             return
     
+    
+    def calc_height(tree) -> int:
+        '''Returns height of provided node.'''
+        
+        left_height = 0
+        right_height = 0
+
+        if tree is None:
+            return 0
+
+        if tree.left is not None:
+            left_height = Tree.calc_height(tree.left) + 1
+        
+        if tree.right is not None:
+            right_height = Tree.calc_height(tree.right) + 1
+
+        #print(f"left: {left_height}, right: {right_height}")
+        result = max(left_height, right_height)
+
+        print(f"The node '{tree.value}' has height: '{result}'")
+
+        return result
+
 
     def __rot_right(node):
         pass
@@ -219,21 +251,11 @@ class Tree():
     def __rot_left(node):
         pass
 
-
     def calc_balance(tree):
         '''Calculates balance of current node. Returns True if its still a valid AVL-Tree'''
+        tree.balance = Tree.calc_height(tree.right) - Tree.calc_height(tree.left)
+        print(f"Node '{tree.value}' has balance: '{tree.balance}'")
         
-        right = 0
-        left = 0
-
-        if tree.right is not None:
-            right = tree.right.balance
-        
-        if tree.left is not None:
-            left = tree.left.balance
-
-        tree.balance = right - left
-
 
     def export(self) -> tuple():
         '''Returns tuple containing the entire tree (value, left, right)'''
